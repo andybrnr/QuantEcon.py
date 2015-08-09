@@ -13,11 +13,11 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 from nose.tools import eq_, raises
 
-from quantecon.mc_tools import (
+from quantecon.markov import (
     MarkovChain, mc_compute_stationary, mc_sample_path
 )
 
-from ..external import numba_installed, jit
+from quantecon.external import numba_installed, jit
 
 
 def list_of_array_equal(s, t):
@@ -102,6 +102,16 @@ def test_markovchain_pmatrices():
          'stationary_dists': np.array([[1, 0], [0, 1]]),
          'comm_classes': [np.array([0]), np.array([1])],
          'rec_classes': [np.array([0]), np.array([1])],
+         'is_irreducible': False,
+         'period': 1,
+         'is_aperiodic': True,
+         },
+        # Reducible mc with a unique recurrent class,
+        # where n-1 is a transient state
+        {'P': np.array([[1, 0], [1, 0]]),
+         'stationary_dists': np.array([[1, 0]]),
+         'comm_classes': [np.array([0]), np.array([1])],
+         'rec_classes': [np.array([0])],
          'is_irreducible': False,
          'period': 1,
          'is_aperiodic': True,
