@@ -3,8 +3,7 @@ Utilities to Support Random Operations and Generating Vectors and Matrices
 """
 
 import numpy as np
-from ..external import numba_installed, jit
-from ..util import check_random_state
+from ..util import check_random_state, numba_installed, jit
 
 #-Generating Arrays and Vectors-#
 
@@ -119,4 +118,6 @@ def sample_without_replacement(n, k, num_trials=None, random_state=None):
         return result
 
 if numba_installed:
+    docs = sample_without_replacement.__doc__
     sample_without_replacement = jit(sample_without_replacement)
+    sample_without_replacement.__doc__ = docs
