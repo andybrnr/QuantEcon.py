@@ -46,14 +46,13 @@ def simulate_linear_model(A, x0, v, ts_length):
     A = np.asarray(A)
     n = A.shape[0]
     x = np.empty((n, ts_length))
-    
     x[:, 0] = x0
     for t in range(ts_length-1):
         # x[:, t+1] = A.dot(x[:, t]) + v[:, t]
         for i in range(n):
-            x[i, t+1] = v[i, t]
+            x[i, t+1] = v[i, t]                   #Shock
             for j in range(n):
-                x[i, t+1] += A[i, j] * x[j, t]
+                x[i, t+1] += A[i, j] * x[j, t]   #Dot Product
     return x
 
 if numba_installed:
@@ -98,8 +97,16 @@ class LinearStateSpace(object):
 
     def __init__(self, A, C, G, H=None, mu_0=None, Sigma_0=None):
         self.A, self.G, self.C = list(map(self.convert, (A, G, C)))
-        self.k, self.n = self.G.shape
+        #-Check Input Shapes-#
+        ni,nj = self.A.shape
+        if ni != nj:
+            raise ValueError("Matrix A (shape: %s) needs to be square" % (self.A.shape))
+        if ni != self.C.shape[0]:
+            raise ValueError("Matrix C (shape: %s) does not have compatible dimensions with A. It should be shape: %s" % (self.C.shape, (ni,1)))
         self.m = self.C.shape[1]
+        self.k, self.n = self.G.shape
+        if self.n != ni:
+            raise ValueError("Matrix G (shape: %s) does not have compatible dimensions with A (%s)"%(self.G.shape, self.A.shape))
         if H is None:
             self.H = None
             self.l = None
@@ -329,3 +336,42 @@ class LinearStateSpace(object):
         S_y = self.G.dot(S_x)
 
         return S_x, S_y
+
+    def impulse_response(self, j=5):
+        """
+        Pulls off the imuplse response coefficients to a shock
+        in w_{t} for x and y
+
+        Important to note: We are uninterested in the shocks to
+        v for this method
+
+        * x coefficients are C, AC, A^2 C...
+        * y coefficients are GC, GAC, GA^2C...
+
+        Parameters
+        ----------
+        j : Scalar(int)
+            Number of coefficients that we want
+
+        Returns
+        -------
+        xcoef : list(array_like(float, 2))
+            The coefficients for x
+        ycoef : list(array_like(float, 2))
+            The coefficients for y
+        """
+        # Pull out matrices
+        A, C, G, H = self.A, self.C, self.G, self.H
+        Apower = np.copy(A)
+
+        # Create room for coefficients
+        xcoef = [C]
+        ycoef = [np.dot(G, C)]
+
+        for i in range(j):
+            xcoef.append(np.dot(Apower, C))
+            ycoef.append(np.dot(G, np.dot(Apower, C)))
+            Apower = np.dot(Apower, A)
+
+        return xcoef, ycoef
+
